@@ -2072,11 +2072,24 @@ func (t *Terminal) Loop() {
 							t.previewer.version = result.version
 							t.previewer.following = t.previewOpts.follow
 						}
-						t.previewer.lines = result.lines
 						t.previewer.spinner = result.spinner
 						if t.previewer.following {
+							t.previewer.lines = result.lines[:]
 							t.previewer.offset = len(t.previewer.lines) - t.pwindow.Height()
-						} else if result.offset >= 0 {
+						} else if len(result.lines) == 0 {
+							t.previewer.lines = result.lines[:]
+						} else {
+							var offset int
+							_, err := fmt.Sscanf(result.lines[0], "#[[FZF_PREVIEW_OFFSET %d]]\n", &offset)
+							if err == nil {
+								t.previewer.lines = result.lines[1:]
+								result.offset = offset
+							} else {
+								t.previewer.lines = result.lines[:]
+							}
+							//ioutil.WriteFile("/dev/pts/0", []byte(fmt.Sprintf("%s|%d\n", result.lines[0], result.offset)), 0644)
+						}
+						if result.offset >= 0 {
 							t.previewer.offset = util.Constrain(result.offset, 0, len(t.previewer.lines)-1)
 						}
 						t.printPreview()
